@@ -55,7 +55,7 @@ def show_json(request):
 
 def show_xml_by_id(request, player_id):
     try:
-        player_item = Player.objects.get(pk=player_id)
+        player_item = Player.objects.filter(pk=player_id)
         xml_data = serializers.serialize('xml', player_item)
         return HttpResponse(xml_data, content_type='application/xml')
     except Player.DoesNotExist:
