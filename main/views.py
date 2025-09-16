@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from django.core import serializers
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from main.models import Player
 from main.forms import PlayerForm
 
@@ -35,6 +36,12 @@ def show_player(request, id):
         'player': player,
     }
     return render(request, 'player_detail.html', context)
+
+def delete_player(request, id):
+    player = get_object_or_404(Player, pk=id)
+    player.delete()
+    messages.success(request, f'Player {player} deleted successfully.')
+    return redirect('main:show_main')
 
 def show_xml(request):
     players_list = Player.objects.all()
