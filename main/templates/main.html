@@ -1,9 +1,45 @@
-<h1>Nama Aplikasi: </h1>
-<p> {{ aplikasi }} <p>
+<h1>Transfer Market</h1>
 
-<h4>NPM: </h4>
-<p>{{ npm }}</p> 
-<h4>Name: </h4>
+<h5>NPM: </h5>
+<p>{{ npm }}</p>
+
+<h5>Name:</h5>
 <p>{{ name }}</p>
-<h4>Class: </h4>
-<p>{{ class }}</p> 
+
+<h5>Class:</h5>
+<p>{{ class }}</p>
+
+<a href="{% url 'main:register_player' %}">
+  <button>+Register Player</button>
+</a>
+
+<hr>
+
+{% if not player_list %}
+<p>Belum ada data player pada market.</p>
+{% else %}
+
+{% for player in player_list %}
+<div>
+  <h2><a href="{% url 'main:show_player' player.id %}">{{ player.name }}</a></h2>
+
+  <p><b>{{ player.get_category_display }}</b>{% if player.is_featured %} | 
+    <b>Featured</b>{% endif %} 
+</p>
+
+  {% if player.thumbnail %}
+  <img src="{{ player.thumbnail }}" alt="thumbnail" width="150" height="100">
+  <br />
+  {% endif %}
+    <p>Club: {{ player.club }}</p>
+    <p>Price: ${{ player.price }}</p>
+    <p>Description: {{ player.description|truncatewords:20 }}...</p>
+
+
+  <p><a href="{% url 'main:show_player' player.id %}"><button>Detail</button></a></p>
+</div>
+
+<hr>
+{% endfor %}
+
+{% endif %}

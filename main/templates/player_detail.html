@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<p><a href="{% url 'main:show_main' %}"><button>← Back to Player List</button></a></p>
+
+<h1>{{ player.name }}</h1>
+<p><b>{{ player.get_category_display }}</b>{% if player.is_featured %} | 
+    <b>Featured</b>{% endif %}
+</p>
+
+{% if player.thumbnail %}
+<img src="{{ player.thumbnail }}" alt="Player thumbnail" width="300">
+<br /><br />
+{% endif %}
+<p>Club: {{ player.club }}</p>
+<p>Price: ${{ player.price }}|</p>
+<p>Nationality: {{ player.nationality }}</p>
+<p>Height: {{ player.height }} cm</p>
+<p>{{ player.description }}</p>
+
+{% endblock content %}
