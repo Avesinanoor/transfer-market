@@ -1,3 +1,6 @@
+<details>
+<summary> Tugas 2 </summary>
+
 ### Link PWS: https://pbp.cs.ui.ac.id/web/project/daffa.abhinaya/transfermarket
 
 # 1. Jelaskan bagaimana cara kamu mengimplementasikan checklist di atas secara step-by-step.
@@ -328,4 +331,324 @@ Django menjalankan operasi migration ke database dan riwayat migration disimpan 
 Django cocok untuk permulaan karena “batteries-included”: sudah ada URL routing, views, template engine, ORM+migrasi, autentikasi, proteksi CSRF, dan admin, jadi pemula bisa fokus ke konsep web tanpa merakit banyak library. Pola MTV-nya jelas; `urls.py` memilih view, view memproses dan (jika perlu) mengambil data lewat model, lalu merender template sehingga pemisahan tanggung jawab mudah dipahami dan ditransfer ke framework lain. Tooling yang seragam (`manage.py`, `settings.py`, pemisahan `.env` .`env.prod`, hingga deploy ke PWS) membuat setup, debugging, dan rilis jadi lebih sederhana. Django memiliki dokumentasi yang lengkap dan penggunaan Python yang sudah sangat familiar karena sudah dipelajari di DDP1.
 
 ## 6. Apakah ada feedback untuk asisten dosen tutorial 1 yang telah kamu kerjakan sebelumnya?
-Menurut saya, isi dan informasi tutorial 1 sudah lengkap, mudah diikuti dan informatif dengan setiap penjelasannya yang mudah dipahami. Asdos juga sudah selalu bersedia dengan stand by di voice channel server discord jika ada pertanyaan atau error.
+Menurut saya isi dan informasi tutorial 1 sudah lengkap, mudah diikuti dan informatif dengan setiap penjelasannya yang mudah dipahami. Asdos juga sudah selalu bersedia dengan stand by di voice channel server discord jika ada pertanyaan atau error.
+</details>
+
+<details>
+<summary> Tugas 3 </summary>
+
+
+## Jelaskan mengapa kita memerlukan data delivery dalam pengimplementasian sebuah platform?
+
+Kita perlu data delivery karena itu cara menyalurkan data dari tempat penyimpanan ke tempat pemakaian (browser, aplikasi mobile, layanan third-party) dengan tepat waktu, akurat, aman, dan andal. Tanpa hal ini, fitur platform tidak dapat berjalan dengan baik: halaman tidak terisi, status pesanan tidak ter-update, integrasi mengalami kegagalan. Dengan pengiriman data yang terorganisir, kita dapat 
+- memberikan pengalaman cepat kepada pengguna (paging, caching, minimal latensi)
+- menjaga keakuratan dan sinkronisasi data antar komponen 
+- mendukung banyak klien dan integrasi (REST/JSON, XML, webhook)
+- melayani real-time jika diperlukan (notifikasi, tracking) 
+- memastikan keandalan dan skalabilitas (retry, queue, idempotency)
+- memenuhi aspek keamanan (auth, otorisasi, HTTPS). 
+
+## Menurutmu, mana yang lebih baik antara XML dan JSON? Mengapa JSON lebih populer dibandingkan XML?
+Menurutku, JSON lebih cocok karena formatnya lebih sederhana dan ringkas (payload kecil), dirancang khusus untuk pertukaran data, dan umumnya memberikan performa serta kecepatan komunikasi yang lebih baik. Itulah sebabnya JSON banyak digunakan untuk API dan aplikasi mobile.
+
+JSON lebih populer karena sifatnya yang lebih sederhana dan padat untuk keperluan data interchange, JSON cenderung lebih cepat dalam proses dan transmisi serta lebih hemat bandwidth. Dalam praktik modern, pola ini menjadikan JSON pilihan default untuk API web dan aplikasi mobile atau penyimpanan data, sementara XML tetap relevan dalam skenario yang memang memerlukan struktur dokumen yang lebih kompleks.
+
+## Jelaskan fungsi dari method is_valid() pada form Django dan mengapa kita membutuhkan method tersebut?
+Django Form/ModelForm dipakai untuk menjalankan seluruh proses validasi atas data yang di-bind ke form dan memberi tahu apakah data itu layak dipakai/di-save.
+
+### Fungsi `is_valid()`
+
+Ketika  memanggilnya pada form yang sudah dibound (misal, `PlayerForm(request.POST)`):
+
+- Mengembalikan `True` bila tidak ada error; `False` bila ada error.
+- `save()` (ModelForm) — menyimpan data form yang valid menjadi objek model baru. 
+- `redirect()` — mengarahkan pengguna kembali (misal ke halaman daftar) setelah save(). 
+- `get_object_or_404() `— mengambil satu objek berdasarkan pk; jika tidak ada, kembalikan 404 (dipakai di detail). 
+- `{{ form.as_table }}` (rendering form di template) dan `{% csrf_token %}` untuk proteksi CSRF saat submit. 
+
+
+### Mengapa kita membutuhkannya?
+
+- Menjaga integritas data sebelum menyentuh database (mencegah ProgrammingError/constraint error).
+- Untuk mengecek apakah data yang dimasukkan pada form memenuhi aturan yang ditetapkan di model dan ketentuan validasi Django.
+- Umpan balik ke pengguna lewat form.errors.
+- Keamanan & ketahanan: menolak input tak valid lebih awal.
+
+## Mengapa kita membutuhkan csrf_token saat membuat form di Django? Apa yang dapat terjadi jika kita tidak menambahkan csrf_token pada form Django? Bagaimana hal tersebut dapat dimanfaatkan oleh penyerang?
+###  Mengapa butuh `csrf_token`
+Untuk mencegah Cross-Site Request Forgery (CSRF): serangan yang “meminjam” sesi login pengguna agar browser mereka mengirim aksi tanpa sadar (misal membuat/menghapus data) ke situs kita. Django mencegah ini dengan token rahasia: server menaruh CSRF cookie dan mewajibkan hidden field `csrfmiddlewaretoken` di setiap form POST internal; server hanya menerima request jika token pada form cocok dengan cookie.
+
+### Apa yang terjadi jika tidak menambahkan `csrf_token`
+- Secara default, Django memblokir request POST (HTTP 403) karena gagal verifikasi CSRF. 
+Django Project
+- Jika verifikasi dinonaktifkan/diabaikan, menjadi rentan CSRF: penyerang bisa memicu aksi di akun korban (misal submit form, ubah profil, hapus data).
+
+### Bagaimana penyerang memanfaatkannya
+Penyerang membuat halaman yang auto-submit form POST ke endpoint kita (misal pada `urls.py` di bagian `player<id>register-player/`) dengan parameter pilihan mereka. Saat korban sedang login, browser otomatis menyertakan session cookie; tanpa validasi token, server mengira request itu sah dan mengeksekusi aksi tersebut. 
+
+## Jelaskan bagaimana cara kamu mengimplementasikan checklist di atas secara step-by-step (bukan hanya sekadar mengikuti tutorial).
+
+### Tambahkan 4 fungsi views baru untuk melihat objek yang sudah ditambahkan dalam format XML, JSON, XML by ID, dan JSON by ID.
+
+#### Pada `views.py` di direktori  main
+Import:
+- `HttpResponse` untuk mengirim respons HTTP,
+- `serializers` untuk mengubah QuerySet/objek model menjadi teks XML/JSON.
+```python
+from django.http import HttpResponse 
+from django.core import serializers
+```
+Kemudian menambahkan 4 fungsi untuk melihat objek dalam format XML, JSON, XML by ID, dan JSON by ID.
+```python
+def show_xml(request):
+    players_list = Player.objects.all()
+    xml_data = serializers.serialize('xml', players_list)
+    return HttpResponse(xml_data, content_type='application/xml')
+
+def show_json(request):
+    players_list = Player.objects.all()
+    json_data = serializers.serialize('json', players_list)
+    return HttpResponse(json_data, content_type='application/json') 
+
+def show_xml_by_id(request, player_id):
+    try:
+        player_item = Player.objects.filter(pk=player_id)
+        xml_data = serializers.serialize('xml', player_item)
+        return HttpResponse(xml_data, content_type='application/xml')
+    except Player.DoesNotExist:
+        return HttpResponse(status=404)
+
+def show_json_by_id(request, player_id):
+    try:
+        player_item = Player.objects.get(pk=player_id)
+        json_data = serializers.serialize('json', [player_item])
+        return HttpResponse(json_data, content_type='application/json')
+    except Player.DoesNotExist:
+        return HttpResponse(status=404)
+```
+
+`show_xml` / `show_json`
+
+- Ambil semua Player (Player.objects.all()),
+
+- Ubah ke XML/JSON dengan serializers.serialize(...),
+
+- Kembalikan via HttpResponse dengan content_type yang sesuai.
+
+`show_xml_by_id` 
+
+- Pakai filter(pk=player_id) sehingga hasilnya QuerySet (iterable) — itu yang dibutuhkan serializers.serialize('xml', ...).
+
+- Jika tidak ada, return 404.
+
+`show_json_by_id`
+
+- Ambil satu objek dengan get(pk=player_id), lalu dibungkus list [...] karena serialize butuh iterable.
+
+- Jika tidak ada, return 404.
+
+#### Selain itu, saya juga menambahkan 3 fitur untuk pembuatan, lihat detail, dan penghapusan objek  pada views.py
+```python
+def register_player(request):
+    form = PlayerForm(request.POST or None)
+    
+    if form.is_valid() and request.method == 'POST':
+        form.save()
+        return redirect('main:show_main')
+    context = {
+        'form': form,}
+    return render(request, 'register_player.html', context)
+
+def show_player(request, id):
+    player = get_object_or_404(Player, pk=id)
+    context = {
+        'player': player,
+    }
+    return render(request, 'player_detail.html', context)
+
+def delete_player(request, id):
+    player = get_object_or_404(Player, pk=id)
+    player.delete()
+    messages.success(request, f'Player {player} deleted successfully.')
+    return redirect('main:show_main')
+```
+`register_player`
+
+- Membuat form dari `PlayerForm` 
+
+- Jika POST dan form.is_valid(): simpan objek baru, lalu redirect ke show_main.
+
+- Jika tidak, render halaman form (`register_player.html`) dengan context form.
+
+`show_player`
+
+- Ambil 1 Player berdasarkan pk (id) atau 404 jika tidak ada.
+
+- Render template detail (`player_detail.html`) dengan context player.
+
+`delete_player`
+- Ambil Player berdasarkan pk (id) atau 404.
+
+- Hapus objek, tampilkan flash message sukses, lalu redirect ke show_main.
+ ### Membuat routing URL untuk masing-masing views yang telah ditambahkan pada poin 1.
+ #### Pada `urls.py` tambahkan path(`...`) untuk fungsi-fungsi yang ada di `views.py`
+ ```python
+ urlpatterns = [
+    path('', show_main, name='show_main'),
+    path('register-player/', register_player, name='register_player'),
+    path('player/<str:id>/', show_player, name='show_player'),
+    path('delete-player/<str:id>/', delete_player, name='delete_player'),
+    path('xml/', show_xml, name='show_xml'),
+    path('json/', show_json, name='show_json'),
+    path('xml/<str:player_id>/', show_xml_by_id, name='show_xml_by_id'),
+    path('json/<str:player_id>/', show_json_by_id, name='show_json_by_id'),
+]
+```
+
+ ### Membuat halaman yang menampilkan data objek model yang memiliki tombol "Add" yang akan redirect ke halaman form, serta tombol "Detail" pada setiap data objek model yang akan menampilkan halaman detail objek.
+#### Buat direktori `templates` pada direktori utama lalu buat file `base.html`
+```html
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {% block meta %} {% endblock meta %}
+</head>
+
+<body>
+    {% block content %} {% endblock content %}
+</body>
+</html>
+```
+#### Pada `settings.py` di direktori proyek, tambahkan pada `TEMPLATES`
+```python
+'DIRS': [BASE_DIR / 'templates']
+```
+#### Membuat halaman main
+```html
+
+<h1>Transfer Market</h1>
+
+<h5>NPM: </h5>
+<p>{{ npm }}</p>
+
+<h5>Name:</h5>
+<p>{{ name }}</p>
+
+<h5>Class:</h5>
+<p>{{ class }}</p>
+
+<a href="{% url 'main:register_player' %}">
+  <button>+Register Player</button>
+</a>
+
+<hr>
+
+{% if not player_list %}
+<p>Belum ada data player pada market.</p>
+{% else %}
+
+{% for player in player_list %}
+<div>
+  <h2><a href="{% url 'main:show_player' player.id %}">{{ player.name }}</a></h2>
+
+  <p><b>{{ player.get_category_display }}</b>{% if player.is_featured %} | 
+    <b>Featured</b>{% endif %} 
+</p>
+
+  {% if player.thumbnail %}
+  <img src="{{ player.thumbnail }}" alt="thumbnail" width="150" height="100">
+  <br />
+  {% endif %}
+    <p>Club: {{ player.club }}</p>
+    <p>Price: ${{ player.price }}</p>
+    <p>Description: {{ player.description|truncatewords:20 }}...</p>
+
+
+  <p><a href="{% url 'main:show_player' player.id %}"><button>Detail</button></a></p>
+</div>
+
+<hr>
+{% endfor %}
+
+{% endif %}
+
+```
+
+
+ ### Membuat halaman form untuk menambahkan objek model pada app sebelumnya.
+ #### Membuat `forms.py` di direktori `main`
+ ```python
+ from django.forms import ModelForm
+from main.models import Player
+
+class PlayerForm(ModelForm):
+    class Meta:
+        model = Player
+        fields = ['name', 'price', 'description', 'thumbnail', 'category', 'is_featured', 'club', 'nationality', 'height']
+ ```
+ #### Membuat `register_player.html` di direktori `templates` pada `main`, tampilan ketika menambahkan objek
+ ```html
+ {% extends 'base.html' %} 
+{% block content %}
+<h1>Register Player</h1>
+
+<form method="POST">
+  {% csrf_token %}
+  <table>
+    {{ form.as_table }}
+    <tr>
+      <td></td>
+      <td>
+        <input type="submit" value="Register Player" />
+      </td>
+    </tr>
+  </table>
+</form>
+
+{% endblock %}
+ ```
+ ### Membuat halaman yang menampilkan detail dari setiap data objek model.
+
+ #### Membuat halaman detail objek, `player_detail.html` pada direktori `templates` di `main` 
+```html
+{% extends 'base.html' %}
+{% block content %}
+<p><a href="{% url 'main:show_main' %}"><button>← Back to Player List</button></a></p>
+
+<h1>{{ player.name }}</h1>
+<p><b>{{ player.get_category_display }}</b>{% if player.is_featured %} | 
+    <b>Featured</b>{% endif %}
+</p>
+
+{% if player.thumbnail %}
+<img src="{{ player.thumbnail }}" alt="Player thumbnail" width="300">
+<br /><br />
+{% endif %}
+<p>Club: {{ player.club }}</p>
+<p>Price: ${{ player.price }}|</p>
+<p>Nationality: {{ player.nationality }}</p>
+<p>Height: {{ player.height }} cm</p>
+<p>{{ player.description }}</p>
+<form action="{% url 'main:delete_player' player.id %}" method="post" style="display: inline;">
+    {% csrf_token %}
+    <button type="submit" onclick="return confirm('Are you sure you want to delete this player?');">Delete Player</button>
+
+{% endblock content %}
+```
+## Apakah ada feedback untuk asdos di tutorial 2 yang sudah kalian kerjakan?
+tidak ada
+
+## Postman
+- JSON
+https://drive.google.com/file/d/1_ZTEc6esu3nQT3EKey1PT57Lb7mzDU1w/view?usp=sharing
+- JSON by ID 
+https://drive.google.com/file/d/1yZewIaGM7BHJfhQoqJnKnMWVJriI76MS/view?usp=sharing
+- XML 
+https://drive.google.com/file/d/16htc-wc_haHn-c4UjztkHyzFHh4ZGddx/view?usp=sharing
+- XMl by ID
+https://drive.google.com/file/d/1Se_8Oc-SHT9ZwW7p0DxKAyTRo-aGZd-2/view?usp=sharing
+
+</details>
