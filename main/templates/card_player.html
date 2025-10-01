@@ -1,0 +1,25 @@
+{% load static %}
+<article class="border border-gray-200 rounded-md bg-white">
+  <div class="p-3 flex items-center gap-3">
+    {% if player.thumbnail %}
+      <img src="{{ player.thumbnail }}" alt="{{ player.name }}" class="w-14 h-14 object-cover rounded"/>
+    {% else %}
+      <div class="w-14 h-14 bg-gray-200 rounded"></div>
+    {% endif %}
+    <div class="flex-1">
+      <div class="font-semibold text-gray-900 leading-tight flex items-center gap-2">
+  {{ player.name }}
+  {% if player.is_featured %}
+    <span class="inline-block text-[10px] px-2 py-0.5 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded">Featured</span>
+  {% endif %}
+</div>
+      <div class="text-xs text-gray-600">{{ player.club }} • {{ player.nationality }}</div>
+      <div class="text-xs text-gray-600">{{ player.get_category_display|default:player.category }} • {{ player.height }} cm</div>
+    </div>
+    <div class="text-right">
+      <div class="text-sm text-gray-700">Price</div>
+      <div class="font-semibold">Rp {{ player.price }}</div>
+      <a href="{% url 'main:show_player' player.id %}" class="text-green-700 text-sm">Detail</a>
+    </div>
+  </div>
+</article>

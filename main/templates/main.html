@@ -1,61 +1,90 @@
-{%extends 'base.html' %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}
+<title>Transfer Market</title>
+{% endblock meta %}
 
 {% block content %}
-<h1>Transfer Market</h1>
+{% include 'navbar.html' %}
 
-<h5>NPM: </h5>
-<p>{{ npm }}</p>
+<div class="bg-gray-100 min-h-screen pt-16 py-8">
+  <div class="max-w-7xl mx-auto px-4">
 
-<h5>Name:</h5>
-<p>{{ name }}</p>
+    <div class="mb-4 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold">Players Market</h1>
+        <p class="text-sm text-gray-600">Browse football players and their market details.</p>
+      </div>
+      <a href="{% url 'main:register_player' %}" class="bg-green-600 text-white px-4 py-2 rounded">Register Player</a>
+    </div>
 
-<h5>Class:</h5>
-<p>{{ class }}</p>
+    <div class="mb-4 bg-white border border-gray-200 rounded-md p-3">
+      <div class="flex items-center gap-2 text-sm">
+        <a href="?" class="px-3 py-1 rounded {% if request.GET.filter == 'all' or not request.GET.filter %} bg-green-600 text-white {% else %} border border-gray-300 text-gray-800 {% endif %}">All</a>
+        <a href="?filter=my" class="px-3 py-1 rounded {% if request.GET.filter == 'my' %} bg-green-600 text-white {% else %} border border-gray-300 text-gray-800 {% endif %}">My Players</a>
+        {% if user.is_authenticated %}
+          <span class="ml-auto text-gray-500">Last login: {{ last_login }}</span>
+        {% endif %}
+      </div>
+    </div>
 
-<a href="{% url 'main:register_player' %}">
-  <button>+Register Player</button>
-</a>
-
-<a href="{% url 'main:logout' %}">
-  <button>Logout</button>
-</a>
-
-<h5>Sesi terakhir login: {{ last_login }}</h5>
-
-<hr>
-<a href="?filter=all">
-  <button type="button">All Players</button>
-</a>
-<a href="?filter=my">
-  <button type="button">My Players</button>
-
-{% if not player_list %}
-<p>Belum ada data player pada market.</p>
-{% else %}
-
-{% for player in player_list %}
-<div>
-  <h2><a href="{% url 'main:show_player' player.id %}">{{ player.name }}</a></h2>
-
-  <p><b>{{ player.get_category_display }}</b>{% if player.is_featured %} | 
-    <b>Featured</b>{% endif %} 
-</p>
-
-  {% if player.thumbnail %}
-  <img src="{{ player.thumbnail }}" alt="thumbnail" width="150" height="100">
-  <br />
+    {% if player_list %}
+      <!-- Table-style list for a more Transfermarkt feel -->
+      <div class="bg-white border border-gray-200 rounded-md overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-gray-50">
+            <tr class="text-gray-700">
+              <th class="px-4 py-3">Player</th>
+              <th class="px-4 py-3">Position</th>
+              <th class="px-4 py-3">Club</th>
+              <th class="px-4 py-3">Nationality</th>
+              <th class="px-4 py-3">Height</th>
+              <th class="px-4 py-3">Price</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in player_list %}
+              <tr class="border-t border-gray-200">
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-3">
+                    {% if p.thumbnail %}
+                      <img src="{{ p.thumbnail }}" alt="{{ p.name }}" class="w-10 h-10 object-cover rounded"/>
+                    {% else %}
+                      <div class="w-10 h-10 bg-gray-200 rounded"></div>
+                    {% endif %}
+                    <div class="font-medium flex items-center gap-2">
+  {{ p.name }}
+  {% if p.is_featured %}
+    <span class="inline-block text-[10px] px-2 py-0.5 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded">Featured</span>
   {% endif %}
-    <p>Club: {{ player.club }}</p>
-    <p>Price: ${{ player.price }}</p>
-    <p>Description: {{ player.description|truncatewords:20 }}...</p>
-
-
-  <p><a href="{% url 'main:show_player' player.id %}"><button>Detail</button></a></p>
 </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3">{{ p.get_category_display|default:p.category }}</td>
+                <td class="px-4 py-3">{{ p.club }}</td>
+                <td class="px-4 py-3">{{ p.nationality }}</td>
+                <td class="px-4 py-3">{{ p.height }} cm</td>
+                <td class="px-4 py-3 font-semibold">Rp {{ p.price }}</td>
+                <td class="px-4 py-3 text-right">
+                  <a href="{% url 'main:show_player' p.id %}" class="text-green-700">Detail</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="bg-white border border-gray-200 rounded-md p-12 text-center">
+        <div class="w-24 h-24 mx-auto mb-3">
+          <img src="{% static 'image/no-player.png' %}" class="w-full h-full object-contain" alt="No players"/>
+        </div>
+        <p class="text-gray-700 mb-4">No players found.</p>
+        <a href="{% url 'main:register_player' %}" class="bg-green-600 text-white px-4 py-2 rounded">Register Player</a>
+      </div>
+    {% endif %}
 
-<hr>
-{% endfor %}
-
-{% endif %}
-
+  </div>
+</div>
 {% endblock content %}

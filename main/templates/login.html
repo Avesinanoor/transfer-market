@@ -1,32 +1,47 @@
 {% extends 'base.html' %}
-
 {% block meta %}
-<title>Login</title>
+<title>Login - Transfer Market</title>
 {% endblock meta %}
 
 {% block content %}
-<div class="login">
-  <h1>Login</h1>
+<div class="bg-gray-100 min-h-screen flex items-center justify-center py-8 px-4">
+  <div class="max-w-md w-full">
+    <div class="bg-white border border-gray-200 rounded-md p-6 form-style">
+      <h1 class="text-xl font-semibold mb-4">Sign In</h1>
 
-  <form method="POST" action="">
-    {% csrf_token %}
-    <table>
-      {{ form.as_table }}
-      <tr>
-        <td></td>
-        <td><input class="btn login_btn" type="submit" value="Login" /></td>
-      </tr>
-    </table>
-  </form>
+      {% if form.non_field_errors %}
+        <div class="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
+          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+      {% endif %}
+      {% if form.errors %}
+        <div class="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
+          {% for field, errors in form.errors.items %}
+            {% if field != '__all__' %}
+              {% for error in errors %}<div>{{ field|title }}: {{ error }}</div>{% endfor %}
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
 
-  {% if messages %}
-  <ul>
-    {% for message in messages %}
-    <li>{{ message }}</li>
-    {% endfor %}
-  </ul>
-  {% endif %} Don't have an account yet?
-  <a href="{% url 'main:register' %}">Register Now</a>
+      <form method="POST" action="" class="space-y-4">
+        {% csrf_token %}
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-800 mb-1">Username</label>
+          <input id="username" name="username" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded"/>
+        </div>
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-800 mb-1">Password</label>
+          <input id="password" name="password" type="password" required class="w-full px-3 py-2 border border-gray-300 rounded"/>
+        </div>
+        <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded">Sign In</button>
+      </form>
+
+      <div class="mt-6 text-center border-t border-gray-200 pt-4 text-sm">
+        <span class="text-gray-600">Don't have an account?</span>
+        <a href="{% url 'main:register' %}" class="text-green-700"> Register</a>
+      </div>
+    </div>
+  </div>
 </div>
-
 {% endblock content %}

@@ -59,6 +59,19 @@ def delete_player(request, id):
     messages.success(request, f'Player {player} deleted successfully.')
     return redirect('main:show_main')
 
+def edit_player(request, id):
+    news = get_object_or_404(Player, pk=id)
+    form = PlayerForm(request.POST or None, instance=news)
+    if form.is_valid() and request.method == 'POST':
+        form.save()
+        return redirect('main:show_main')
+
+    context = {
+        'form': form
+    }
+
+    return render(request, "edit_player.html", context)
+
 def show_xml(request):
     players_list = Player.objects.all()
     xml_data = serializers.serialize('xml', players_list)
@@ -118,3 +131,4 @@ def logout_user(request):
     response = HttpResponseRedirect(reverse('main:login'))
     response.delete_cookie('last_login')
     return response
+
