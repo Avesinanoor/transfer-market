@@ -971,3 +971,48 @@ def logout_user(request):
 <h5>Sesi terakhir login: {{ last_login }}</h5>
 ```
 </details>
+
+Tugas 5
+## Jika terdapat beberapa CSS selector untuk suatu elemen HTML, jelaskan urutan prioritas pengambilan CSS selector tersebut!
+- !important paling atas
+- Inline style
+- stylesheet. 
+- Specificity: ID #id 
+- class/atribut/pseudo-class .c [attr] :hover 
+- elemen/pseudo-elemen h1 ::before. 
+
+Ketika ada 2 selector dengan hierarki sama, selector yang terakhir yang dipakai
+
+## Mengapa responsive design menjadi konsep yang penting dalam pengembangan aplikasi web? Berikan contoh aplikasi yang sudah dan     menerapkan responsive design, serta jelaskan mengapa!
+Responsive design penting karena akan lebih nyaman dipakai di berbagai ukuran layar pada web (mobile dan desktop) dengan satu basis kode untuk meningkatkan pengalaman user dan aksesibilitas.
+#### Contoh yang sudah responsive design: Wikipedia
+ karena arsitekturnya memang memisahkan skin desktop vs mobile. Untuk trafik mobile, Wikimedia memakai skin Minerva Neue yang responsif dan beradaptasi ke perangkat seluler, didorong oleh ekstensi MobileFrontend (Minerva = default untuk proyek Wikimedia di perangkat mobile). Ini membuat halaman konten yang mostly teks–gambar tampil rapi di berbagai lebar layar tanpa web terpisah. 
+
+#### Contoh yang belum responsive design: Google Docs 
+belum sepenuhnya responsif di web mobile karena strategi utamanya app-first. Google mengarahkan user smartphone untuk memakai aplikasi Google Docs (Android/iOS) dibanding menggunakan browser mobile; banyak fitur lengkap memang tersedia di aplikasi atau di browser desktop. 
+
+## 3 Jelaskan perbedaan antara margin, border, dan padding, serta cara untuk mengimplementasikan ketiga hal tersebut!
+- Padding: ruang di dalam kotak, antara konten dan border.
+- Border: garis pembatas mengitari padding/konten.
+- Margin: ruang di luar border, memisahkan elemen dari elemen lain.
+Box model diatur oleh properti ini; `box-sizing: border-box`; membuat width/height sudah termasuk padding+border 
+
+Contoh: 
+```css
+.card {
+  margin: 16px;            /* luar */
+  border: 1px solid #ddd;  /* garis tepi */
+  padding: 12px;           /* dalam */
+  box-sizing: border-box;
+}
+```
+
+## Jelaskan konsep flex box dan grid layout beserta kegunaannya!
+- Flexbox, layout satu dimensi (hanya bisa baris atau kolom). Biasanya cocok untuk navbar, dan kumpulan tombol. Contoh:
+```css
+.row { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+```
+- Grid, layout dua dimensi (bisa baris dan kolom) Biasanya cocok untuk layout halaman dan dashboard. Contoh:
+```css
+.grid { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
+```
