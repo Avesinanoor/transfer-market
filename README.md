@@ -972,7 +972,9 @@ def logout_user(request):
 ```
 </details>
 
-Tugas 5
+<details>
+<summary> Tugas 5 </summary>
+
 ## Jika terdapat beberapa CSS selector untuk suatu elemen HTML, jelaskan urutan prioritas pengambilan CSS selector tersebut!
 - !important paling atas
 - Inline style
@@ -1016,3 +1018,560 @@ Contoh:
 ```css
 .grid { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
 ```
+
+## Implementasi checklist secara step-by-step
+### Fungsi untuk menghapus dan mengedit product.
+Membuat fungsi `delete_player` dan `edit_player` pada `views.py`
+```python
+def delete_player(request, id):
+    player = get_object_or_404(Player, pk=id)
+    player.delete()
+    messages.success(request, f'Player {player} deleted successfully.')
+    return redirect('main:show_main')
+
+def edit_player(request, id):
+    news = get_object_or_404(Player, pk=id)
+    form = PlayerForm(request.POST or None, instance=news)
+    if form.is_valid() and request.method == 'POST':
+        form.save()
+        return redirect('main:show_main')
+
+    context = {
+        'form': form
+    }
+
+    return render(request, "edit_player.html", context)
+```
+Routing `urls.py`
+pada `urls.py` import `delete_player` dan `edit_player` dan tambahkan
+```python
+path('delete-player/<str:id>/', delete_player, name='delete_player'),
+path('edit/<uuid:id>/edit', edit_player, name='edit_player'),
+```
+
+### Kustomisasi halaman login, register, tambah product, edit product, dan detail product semenarik mungkin.
+- Menambahkan styling Tailwind dan `global.css`. Buat file `global.css` pada `css` dengan buat folder baru `static/css` pada `transfer-market`
+```css
+.form-style form input, form textarea, form select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 2px solid #bcbcbc;
+    border-radius: 0.375rem;
+}
+.form-style form input:focus, form textarea:focus, form select:focus {
+    outline: none;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px #16a34a;
+}
+
+.form-style input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: 2px solid #d1d5db;
+    border-radius: 0.375rem;
+    background-color: white;
+    cursor: pointer;
+    position: relative;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.form-style input[type="checkbox"]:checked {
+    background-color: #16a34a;
+    border-color: #16a34a;
+}
+
+.form-style input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 0.875rem;
+}
+
+.form-style input[type="checkbox"]:focus {
+    outline: none;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+```
+Edit file `base.html`
+```html
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {% block meta %} {% endblock meta %}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/global.css' %}"/>
+  </head>
+  <body>
+    {% block content %} {% endblock content %}
+  </body>
+</html>
+```
+- Edit `login.html` untuk kustomisasi halaman login
+```html
+{% extends 'base.html' %}
+{% block meta %}
+<title>Login - Transfer Market</title>
+{% endblock meta %}
+
+{% block content %}
+<div class="bg-gray-100 min-h-screen flex items-center justify-center py-8 px-4">
+  <div class="max-w-md w-full">
+    <div class="bg-white border border-gray-200 rounded-md p-6 form-style">
+      <h1 class="text-xl font-semibold mb-4">Sign In</h1>
+
+      {% if form.non_field_errors %}
+        <div class="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
+          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+      {% endif %}
+      {% if form.errors %}
+        <div class="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
+          {% for field, errors in form.errors.items %}
+            {% if field != '__all__' %}
+              {% for error in errors %}<div>{{ field|title }}: {{ error }}</div>{% endfor %}
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="POST" action="" class="space-y-4">
+        {% csrf_token %}
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-800 mb-1">Username</label>
+          <input id="username" name="username" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded"/>
+        </div>
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-800 mb-1">Password</label>
+          <input id="password" name="password" type="password" required class="w-full px-3 py-2 border border-gray-300 rounded"/>
+        </div>
+        <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded">Sign In</button>
+      </form>
+
+      <div class="mt-6 text-center border-t border-gray-200 pt-4 text-sm">
+        <span class="text-gray-600">Don't have an account?</span>
+        <a href="{% url 'main:register' %}" class="text-green-700"> Register</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+```
+- Kustomisasi `register.html`
+```html
+{% extends 'base.html' %}
+{% block meta %}
+<title>Register - Transfer Market</title>
+{% endblock meta %}
+
+{% block content %}
+<div class="bg-gray-100 min-h-screen flex items-center justify-center py-8 px-4">
+  <div class="max-w-md w-full">
+    <div class="bg-white border border-gray-200 rounded-md p-6 form-style">
+      <h1 class="text-xl font-semibold mb-4">Create Account</h1>
+
+      {% if form.non_field_errors %}
+        <div class="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
+          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+      {% endif %}
+      {% if form.errors %}
+        <div class="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
+          {% for field, errors in form.errors.items %}
+            {% if field != '__all__' %}
+              {% for error in errors %}<div>{{ field|title }}: {{ error }}</div>{% endfor %}
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="POST" action="" class="space-y-4">
+        {% csrf_token %}
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-800 mb-1">Username</label>
+          <input id="username" name="username" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded"/>
+        </div>
+        <div>
+          <label for="password1" class="block text-sm font-medium text-gray-800 mb-1">Password</label>
+          <input id="password1" name="password1" type="password" required class="w-full px-3 py-2 border border-gray-300 rounded"/>
+        </div>
+        <div>
+          <label for="password2" class="block text-sm font-medium text-gray-800 mb-1">Confirm Password</label>
+          <input id="password2" name="password2" type="password" required class="w-full px-3 py-2 border border-gray-300 rounded"/>
+        </div>
+        <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded">Create Account</button>
+      </form>
+
+      <div class="mt-6 text-center text-sm">
+        <a href="{% url 'main:login' %}" class="text-green-700">Already have an account? Sign in</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+```
+- Kustomisasi `register_player.html` untuk tambah product
+```html
+{% extends 'base.html' %}
+{% block meta %}
+<title>Register Player - Transfer Market</title>
+{% endblock meta %}
+{% block content %}
+<div class="bg-gray-100 min-h-screen py-8">
+  <div class="max-w-3xl mx-auto px-4">
+
+    <a href="{% url 'main:show_main' %}" class="text-sm text-gray-700">← Back</a>
+
+    <div class="bg-white border border-gray-200 rounded-md mt-4">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h1 class="text-xl font-semibold">Register Player</h1>
+        <p class="text-gray-600 text-sm">Add a new football player to the market.</p>
+      </div>
+
+      <div class="px-6 py-5 form-style">
+        <form method="POST" class="space-y-4">
+          {% csrf_token %}
+          {% for field in form %}
+            <div>
+              <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-800 mb-1">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}
+                <p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>
+              {% endif %}
+              {% for error in field.errors %}
+                <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endfor %}
+
+          <div class="pt-4 flex items-center gap-3">
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Submit</button>
+            <a href="{% url 'main:show_main' %}" class="px-4 py-2 border border-gray-300 rounded text-gray-800">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+```
+- Kustomisasi `edit_player.html` untuk edit product
+```html
+{% extends 'base.html' %}
+{% block meta %}
+<title>Edit Player - Transfer Market</title>
+{% endblock meta %}
+
+{% block content %}
+<div class="bg-gray-100 min-h-screen py-8">
+  <div class="max-w-3xl mx-auto px-4">
+
+    <a href="{% url 'main:show_main' %}" class="text-sm text-gray-700">← Back</a>
+
+    <div class="bg-white border border-gray-200 rounded-md mt-4">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h1 class="text-xl font-semibold">Edit Player</h1>
+        <p class="text-gray-600 text-sm">Update player information.</p>
+      </div>
+      <div class="px-6 py-5 form-style">
+        <form method="POST" class="space-y-4">
+          {% csrf_token %}
+          {% for field in form %}
+            <div>
+              <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-800 mb-1">{{ field.label }}</label>
+              {{ field }}
+              {% for error in field.errors %}
+                <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endfor %}
+          <div class="pt-4 flex items-center gap-3">
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Save</button>
+            <a href="{% url 'main:show_main' %}" class="px-4 py-2 border border-gray-300 rounded text-gray-800">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+```
+- Kustomisasi `player_detail.html` untuk detail product
+```html
+{% extends 'base.html' %}
+
+{% block meta %}
+<title>{{ player.name }} - Transfer Market</title>
+{% endblock meta %}
+
+{% block content %}
+<div class="bg-gray-100 min-h-screen py-8">
+  <div class="max-w-6xl mx-auto px-4">
+
+    <a href="{% url 'main:show_main' %}" class="text-sm text-gray-700">← Back to list</a>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+      <!-- Left: Photo & basic info -->
+      <div class="bg-white border border-gray-200 rounded-md p-4">
+        {% if player.thumbnail %}
+          <img src="{{ player.thumbnail }}" alt="{{ player.name }}" class="w-full h-64 object-cover rounded"/>
+        {% else %}
+          <div class="w-full h-64 bg-gray-200 rounded"></div>
+        {% endif %}
+        <div class="mt-4">
+          <div class="text-lg font-semibold">{{ player.name }}</div>
+          <div class="text-sm text-gray-600">{{ player.club }}</div>
+          <div class="text-sm text-gray-600">{{ player.nationality }}</div>
+        </div>
+      </div>
+
+      <!-- Right: Details -->
+      <div class="lg:col-span-2 bg-white border border-gray-200 rounded-md">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h1 class="text-xl font-semibold">Player Profile</h1>
+        </div>
+        <div class="px-6 py-5">
+          <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+            <div>
+              <dt class="text-gray-600">Position</dt>
+              <dd class="font-medium">{{ player.get_category_display|default:player.category }}</dd>
+            </div>
+            <div>
+              <dt class="text-gray-600">Height</dt>
+              <dd class="font-medium">{{ player.height }} cm</dd>
+            </div>
+            <div>
+              <dt class="text-gray-600">Price</dt>
+              <dd class="font-medium">Rp {{ player.price }}</dd>
+            </div>
+          </dl>
+          {% if player.description %}
+            <div class="mt-6">
+              <div class="text-gray-800 text-sm leading-relaxed whitespace-pre-line">{{ player.description }}</div>
+            </div>
+          {% endif %}
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            {% if user.is_authenticated and player.user == user %}
+              <a href="{% url 'main:edit_player' player.id %}" class="px-3 py-2 border border-gray-300 rounded text-gray-800 text-sm">Edit</a>
+              <form action="{% url 'main:delete_player' player.id %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="px-3 py-2 bg-red-600 text-white rounded text-sm">Delete</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock content %}
+```
+
+### Kustomisasi halaman daftar product menjadi lebih menarik dan responsive. 
+- Kustomisasi `main.html` 
+```html
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}
+<title>Transfer Market</title>
+{% endblock meta %}
+
+{% block content %}
+{% include 'navbar.html' %}
+
+<div class="bg-gray-100 min-h-screen pt-16 py-8">
+  <div class="max-w-7xl mx-auto px-4">
+
+    <div class="mb-4 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold">Players Market</h1>
+        <p class="text-sm text-gray-600">Browse football players and their market details.</p>
+      </div>
+      <a href="{% url 'main:register_player' %}" class="bg-green-600 text-white px-4 py-2 rounded">
+        Register Player
+      </a>
+    </div>
+
+    {# Tabs: All / My #}
+    <div class="mb-4 bg-white border border-gray-200 rounded-md p-3">
+      <div class="flex items-center gap-2 text-sm">
+        <a href="?" class="px-3 py-1 rounded {% if request.GET.filter == 'all' or not request.GET.filter %} bg-green-600 text-white {% else %} border border-gray-300 text-gray-800 {% endif %}">All Players</a>
+        <a href="?filter=my" class="px-3 py-1 rounded {% if request.GET.filter == 'my' %} bg-green-600 text-white {% else %} border border-gray-300 text-gray-800 {% endif %}">My Players</a>
+        {% if user.is_authenticated and last_login %}
+          <span class="ml-auto text-gray-500">Last login: {{ last_login }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if player_list %}
+      {# Deretan kartu horizontal (satu kartu per pemain) #}
+      <div class="space-y-3">
+        {% for p in player_list %}
+          {% include 'card_player.html' with player=p %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="bg-white border border-gray-200 rounded-md p-12 text-center">
+        <div class="w-24 h-24 mx-auto mb-3">
+          <img src="{% static 'image/no-player.png' %}" class="w-full h-full object-contain" alt="No players"/>
+        </div>
+        <p class="text-gray-700 mb-4">No players found.</p>
+        <a href="{% url 'main:register_player' %}" class="bg-green-600 text-white px-4 py-2 rounded">Register Player</a>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock content %}
+
+```
+
+### Untuk setiap card product, buatlah dua buah button untuk mengedit dan menghapus product pada card tersebut!
+- Edit `card_player.html` ketika ingin edit/delete `product` tanpa melihat detail, bisa dengan pencet tombol titik tiga lalu pilih edit/delete
+```html
+<article class="bg-white border border-gray-200 rounded-md p-3">
+<div class="flex items-center gap-3">
+    {% if player.thumbnail %}
+    <a href="{% url 'main:show_player' player.id %}">
+        <img src="{{ player.thumbnail }}" alt="{{ player.name }}" class="w-14 h-14 object-cover rounded">
+    </a>
+    {% else %}
+    <div class="w-14 h-14 bg-gray-200 rounded"> </div>
+    {% endif %}
+
+    <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+            <a href="{% url 'main:show_player' player.id %}" class="font-semibold text-gray-900 truncate">{{ player.name }}</a>
+            {% if player.is_featured %}
+                <span class="inline-block text-[10px] px-2 py-0.5 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded">Featured</span>
+            {% endif %}
+        </div>
+
+            <div class="mt-1 flex flex-wrap gap-1">
+            <span class="inline-block text-[10px] px-2 py-0.5 bg-blue-100 text-blue-800 border border-blue-200 rounded">{{ player.get_category_display|default:player.category }}</span>
+            <span class="inline-block text-[10px] px-2 py-0.5 bg-green-100 text-green-800 border border-green-200 rounded">{{ player.club }}</span>
+            <span class="inline-block text-[10px] px-2 py-0.5 bg-gray-100 text-gray-800 border border-gray-200 rounded">{{ player.nationality }}</span>
+            </div>
+
+    </div>
+
+
+    <div class="text-right">
+        {% if user.is_authenticated and player.user_id == user.id %}
+        <details class="relative inline-block">
+        <summary class="list-none px-2 py-1 border border-gray-300 rounded text-gray-800 cursor-pointer" aria-label="Actions">⋯</summary>
+        
+        <div class="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded z-10">
+        <a href="{% url 'main:edit_player' player.id %}" class="block px-3 py-2 text-sm text-gray-800">Edit</a>
+        <a href="{% url 'main:delete_player' player.id %}" class="block px-3 py-2 text-sm text-red-700">Delete</a>
+
+        </div>
+        </details>
+        {% endif %} 
+    </div>
+
+</div>
+</article>
+```
+### Buatlah navigation bar (navbar) untuk fitur-fitur pada aplikasi yang responsive terhadap perbedaan ukuran device, khususnya mobile dan desktop.
+Buat file `navbar.html` pada `templates` di root
+```html
+<nav class="fixed top-0 left-0 w-full bg-white border-b border-gray-200 z-50">
+  <div class="max-w-7xl mx-auto px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <div class="text-xl font-semibold text-gray-900"><span class="text-green-600">Transfer</span> Market</div>
+      <div class="hidden md:flex items-center gap-6">
+        <a href="/" class="text-gray-700">Home</a>
+        <a href="{% url 'main:register_player' %}" class="text-gray-700">Register Player</a>
+      </div>
+      <div class="hidden md:flex items-center gap-4">
+        {% if user.is_authenticated %}
+          <div class="text-right text-sm">
+            <div class="font-medium text-gray-900">{{ name|default:user.username }}</div>
+            <div class="text-gray-500">{{ npm|default:"Student" }} - {{ class|default:"Class" }}</div>
+          </div>
+          <a href="{% url 'main:logout' %}" class="text-red-700">Logout</a>
+        {% else %}
+          <a href="{% url 'main:login' %}" class="text-gray-700">Login</a>
+          <a href="{% url 'main:register' %}" class="bg-green-600 text-white px-4 py-2 rounded">Register</a>
+        {% endif %}
+      </div>
+      <!-- Simple mobile: always visible links below -->
+    </div>
+  </div>
+  <div class="md:hidden border-t border-gray-200">
+    <div class="px-6 py-3 flex items-center gap-4 text-sm">
+      <a href="/" class="text-gray-700">Home</a>
+      <a href="{% url 'main:register_player' %}" class="text-gray-700">Register Player</a>
+      {% if user.is_authenticated %}
+        <a href="{% url 'main:logout' %}" class="text-red-700 ml-auto">Logout</a>
+      {% else %}
+        <a href="{% url 'main:login' %}" class="text-gray-700 ml-auto">Login</a>
+        <a href="{% url 'main:register' %}" class="bg-green-600 text-white px-3 py-1 rounded">Register</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+```
+</details>
+
+
+<details>
+<summary> Tugas 6 </summary>
+
+##  Perbedaan synchronous request dan asynchronous request
+ Synchronous request membuat browser menunggu sampai respons selesai sebelum bisa lanjut menjalankan hal lain. Efeknya interface nampak nge-"freeze" karena satu cycle kerja harus selesai dulu. Sedangkan, Asynchronous reqgituest tidak memblokir eksekusi, halaman tetap responsif sambil menunggu respons, dan ketika data datang barulah bagian tertentu pada halaman diperbarui. Konsep dari AJAX ini memungkinkan untuk update isi halaman tanpa harus reload. 
+
+- Synchronous: blocking, terdapat potensi UI tidak merespons.
+- Asynchronous: non-blocking, update bagian halaman saja.
+
+## Alur kerja AJAX di Django
+Misal ada event di halaman (misalnya klik tombol atau saat halaman dibuka), JavaScript memanggil fetch ke endpoint Django, server memproses dan mengembalikan JSON, lalu JavaScript membaca respons dan merender ulang elemen DOM yang relevan tanpa reload halaman. Alurnya:
+-  event → fetch → view Django → JsonResponse → update DOM. 
+
+Pada sisi server, view Django mengumpulkan data model, mengubahnya menjadi list of dict, lalu mengirimnya sebagai JsonResponse. Pada sisi klien, template menyiapkan kontainer seperti loading, error, grid, dan JavaScript menampilkan atau meng-hide sambil merender `card` untuk `product`
+
+• JsonResponse adalah subclass HttpResponse yang otomatis memberi Content-Type application/json dan mempermudah serialisasi. 
+
+## Keuntungan AJAX dibanding render biasa di Django
+User lebih nyaman  karena tidak perlu manual full page reload. Data bisa dipanggil di "belakang" lalu hanya bagian yang perlu diperbarui yang diganti. Jadi, ketika memakai AJAX, JavaScript di halaman mengirim request ke server secara asynchronous lewat fetch atau XMLHttpRequest. Proses jaringan itu ditangani browser di “belakang layar” sehingga halaman tidak melakukan reload penuh dan user masih bisa menekan tombol lain. Setelah respons datang, JavaScript mengambil data yang dibutuhkan lalu memperbarui hanya elemen DOM yang relevan.Bandwidth serta beban render ulang halaman penuh juga berkurang. Contoh
+
+- Responsif dan hemat waktu: hanya bagian yang berubah yang di-update.
+- State UI yang jelas: loading spinner, error, empty state, dan notifikasi toast.
+
+## Cara memastikan keamanan saat menggunakan AJAX untuk fitur Login dan Register di Django?
+
+
+- CSRF protection. Untuk request POST dari AJAX di origin yang sama, sertakan CSRF token ke header atau body. Jangan menonaktifkan CSRF untuk endpoint login atau register. Gunakan `{% csrf_token %}` pada form serta read token di JavaScript ketika melakukan fetch. 
+
+- Validasi sisi server dan proses aman. Gunakan mekanisme Django auth seperti `authenticate` dan form bawaan Django sehingga kredensial diproses oleh komponen yang sudah teruji, bukan oleh logika custom yang raw. 
+
+- Lindungi dari XSS. Membersihkan input di server (misalnya `strip_tags` dalam form clean) dan membersihkan output di client menggunakan DOMPurify sebelum memasukkan string ke innerHTML. Ini mencegah script injection melalui data yang ditampilkan kembali. 
+
+- Pakai HTTPS untuk mengirim kredensial agar terenkripsi saat transit.
+
+
+## Dampak AJAX terhadap User Experience
+AJAX membuat interaksi terasa mulus karena usder tidak dipindah-pindah halaman. Misalnya, saat data dimuat ditampilkan spinner, jika sukses grid konten muncul, jika gagal ada error message, dan untuk aksi seperti membuat data, muncul notifikasi toast. Mekanisme ini meningkatkan rasa kontrol user dan mengurangi friction. 
+- Navigasi cepat karena partial update.
+- Respon real-time melalui loading state dan toast membantu user memahami apa yang sedang terjadi.
+
+</details>

@@ -1,25 +1,43 @@
-{% load static %}
-<article class="border border-gray-200 rounded-md bg-white">
-  <div class="p-3 flex items-center gap-3">
+<article class="bg-white border border-gray-200 rounded-md p-3">
+<div class="flex items-center gap-3">
     {% if player.thumbnail %}
-      <img src="{{ player.thumbnail }}" alt="{{ player.name }}" class="w-14 h-14 object-cover rounded"/>
+    <a href="{% url 'main:show_player' player.id %}">
+        <img src="{{ player.thumbnail }}" alt="{{ player.name }}" class="w-14 h-14 object-cover rounded">
+    </a>
     {% else %}
-      <div class="w-14 h-14 bg-gray-200 rounded"></div>
+    <div class="w-14 h-14 bg-gray-200 rounded"> </div>
     {% endif %}
-    <div class="flex-1">
-      <div class="font-semibold text-gray-900 leading-tight flex items-center gap-2">
-  {{ player.name }}
-  {% if player.is_featured %}
-    <span class="inline-block text-[10px] px-2 py-0.5 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded">Featured</span>
-  {% endif %}
-</div>
-      <div class="text-xs text-gray-600">{{ player.club }} • {{ player.nationality }}</div>
-      <div class="text-xs text-gray-600">{{ player.get_category_display|default:player.category }} • {{ player.height }} cm</div>
+
+    <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+            <a href="{% url 'main:show_player' player.id %}" class="font-semibold text-gray-900 truncate">{{ player.name }}</a>
+            {% if player.is_featured %}
+                <span class="inline-block text-[10px] px-2 py-0.5 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded">Featured</span>
+            {% endif %}
+        </div>
+
+            <div class="mt-1 flex flex-wrap gap-1">
+            <span class="inline-block text-[10px] px-2 py-0.5 bg-blue-100 text-blue-800 border border-blue-200 rounded">{{ player.get_category_display|default:player.category }}</span>
+            <span class="inline-block text-[10px] px-2 py-0.5 bg-green-100 text-green-800 border border-green-200 rounded">{{ player.club }}</span>
+            <span class="inline-block text-[10px] px-2 py-0.5 bg-gray-100 text-gray-800 border border-gray-200 rounded">{{ player.nationality }}</span>
+            </div>
+
     </div>
+
+
     <div class="text-right">
-      <div class="text-sm text-gray-700">Price</div>
-      <div class="font-semibold">Rp {{ player.price }}</div>
-      <a href="{% url 'main:show_player' player.id %}" class="text-green-700 text-sm">Detail</a>
+        {% if user.is_authenticated and player.user_id == user.id %}
+        <details class="relative inline-block">
+        <summary class="list-none px-2 py-1 border border-gray-300 rounded text-gray-800 cursor-pointer" aria-label="Actions">⋯</summary>
+        
+        <div class="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded z-10">
+        <a href="{% url 'main:edit_player' player.id %}" class="block px-3 py-2 text-sm text-gray-800">Edit</a>
+        <a href="{% url 'main:delete_player' player.id %}" class="block px-3 py-2 text-sm text-red-700">Delete</a>
+
+        </div>
+        </details>
+        {% endif %} 
     </div>
-  </div>
+
+</div>
 </article>
