@@ -3,10 +3,138 @@
 
 {% block meta %}
 <title>Transfer Market</title>
+<style>
+  /* Toast Styles */
+  .toast-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .toast {
+    min-width: 300px;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  @keyframes slideIn {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideOut {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+  }
+  
+  .toast.removing {
+    animation: slideOut 0.3s ease-out;
+  }
+  
+  .toast-success {
+    background-color: #10b981;
+    color: white;
+  }
+  
+  .toast-error {
+    background-color: #ef4444;
+    color: white;
+  }
+  
+  .toast-info {
+    background-color: #3b82f6;
+    color: white;
+  }
+  
+  /* Modal Styles */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.2s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .modal-content {
+    background-color: white;
+    padding: 24px;
+    border-radius: 8px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  @keyframes slideUp {
+    from {
+      transform: translateY(50px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  /* Loading Spinner */
+  .spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #16a34a;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
 {% endblock meta %}
 
 {% block content %}
 {% include 'navbar.html' %}
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
 
 <div class="bg-gray-100 min-h-screen pt-16 py-8">
   <div class="max-w-7xl mx-auto px-4">
@@ -16,39 +144,407 @@
         <h1 class="text-2xl font-bold">Players Market</h1>
         <p class="text-sm text-gray-600">Browse football players and their market details.</p>
       </div>
-      <a href="{% url 'main:register_player' %}" class="bg-green-600 text-white px-4 py-2 rounded">
-        Register Player
-      </a>
+      <button onclick="openCreateModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        Add New Player
+      </button>
     </div>
 
-    {# Tabs: All / My #}
+    <!-- Tabs: All / My -->
     <div class="mb-4 bg-white border border-gray-200 rounded-md p-3">
       <div class="flex items-center gap-2 text-sm">
-        <a href="?" class="px-3 py-1 rounded {% if request.GET.filter == 'all' or not request.GET.filter %} bg-green-600 text-white {% else %} border border-gray-300 text-gray-800 {% endif %}">All Players</a>
-        <a href="?filter=my" class="px-3 py-1 rounded {% if request.GET.filter == 'my' %} bg-green-600 text-white {% else %} border border-gray-300 text-gray-800 {% endif %}">My Players</a>
+        <button onclick="loadPlayers('all')" id="btnAllPlayers" class="px-3 py-1 rounded bg-green-600 text-white">All Players</button>
+        <button onclick="loadPlayers('my')" id="btnMyPlayers" class="px-3 py-1 rounded border border-gray-300 text-gray-800">My Players</button>
+        <button onclick="loadPlayers()" class="ml-2 px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-50"> Refresh</button>
         {% if user.is_authenticated and last_login %}
           <span class="ml-auto text-gray-500">Last login: {{ last_login }}</span>
         {% endif %}
       </div>
     </div>
 
-    {% if player_list %}
-      {# Deretan kartu horizontal (satu kartu per pemain) #}
-      <div class="space-y-3">
-        {% for p in player_list %}
-          {% include 'card_player.html' with player=p %}
-        {% endfor %}
+    <!-- Loading State -->
+    <div id="loadingState" class="hidden bg-white border border-gray-200 rounded-md p-12 text-center">
+      <div class="spinner mx-auto mb-3"></div>
+      <p class="text-gray-700">Loading players...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="hidden bg-white border border-gray-200 rounded-md p-12 text-center">
+      <p class="text-gray-700 mb-4">Failed to load players. Please try again.</p>
+      <button onclick="loadPlayers()" class="bg-green-600 text-white px-4 py-2 rounded">Retry</button>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden bg-white border border-gray-200 rounded-md p-12 text-center">
+      <div class="w-24 h-24 mx-auto mb-3">
+        <svg class="w-full h-full text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
       </div>
-    {% else %}
-      <div class="bg-white border border-gray-200 rounded-md p-12 text-center">
-        <div class="w-24 h-24 mx-auto mb-3">
-          <img src="{% static 'image/no-player.png' %}" class="w-full h-full object-contain" alt="No players"/>
-        </div>
-        <p class="text-gray-700 mb-4">No players found.</p>
-        <a href="{% url 'main:register_player' %}" class="bg-green-600 text-white px-4 py-2 rounded">Register Player</a>
-      </div>
-    {% endif %}
+      <p class="text-gray-700 mb-4">No players found.</p>
+      <button onclick="openCreateModal()" class="bg-green-600 text-white px-4 py-2 rounded">Add New Player</button>
+    </div>
+
+    <!-- Players List -->
+    <div id="playersList" class="space-y-3">
+      <!-- Players will be loaded here via AJAX -->
+    </div>
 
   </div>
 </div>
+
+<!-- Create/Edit Player Modal -->
+<div id="playerModal" class="modal">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-4">
+      <h2 id="modalTitle" class="text-xl font-semibold">Add New Player</h2>
+      <button onclick="closePlayerModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+    </div>
+    <form id="playerForm" onsubmit="submitPlayerForm(event)">
+      <input type="hidden" id="playerId" name="playerId">
+      
+      <div class="space-y-4">
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-800 mb-1">Player Name *</label>
+          <input type="text" id="name" name="name" required class="w-full px-3 py-2 border border-gray-300 rounded">
+        </div>
+        
+        <div>
+          <label for="price" class="block text-sm font-medium text-gray-800 mb-1">Price (in millions) *</label>
+          <input type="number" id="price" name="price" required class="w-full px-3 py-2 border border-gray-300 rounded">
+        </div>
+        
+        <div>
+          <label for="club" class="block text-sm font-medium text-gray-800 mb-1">Club *</label>
+          <input type="text" id="club" name="club" required class="w-full px-3 py-2 border border-gray-300 rounded">
+        </div>
+        
+        <div>
+          <label for="nationality" class="block text-sm font-medium text-gray-800 mb-1">Nationality *</label>
+          <input type="text" id="nationality" name="nationality" required class="w-full px-3 py-2 border border-gray-300 rounded">
+        </div>
+        
+        <div>
+          <label for="category" class="block text-sm font-medium text-gray-800 mb-1">Position *</label>
+          <select id="category" name="category" required class="w-full px-3 py-2 border border-gray-300 rounded">
+            <option value="">Select Position</option>
+            <option value="goalkeeper">Goalkeeper</option>
+            <option value="center-back">Center-Back</option>
+            <option value="left-back">Left-Back</option>
+            <option value="right-back">Right-Back</option>
+            <option value="center-midfielder">Center-Midfielder</option>
+            <option value="attacking-midfielder">Attacking-Midfielder</option>
+            <option value="defensive-midfielder">Defensive-Midfielder</option>
+            <option value="left-winger">Left-Winger</option>
+            <option value="right-winger">Right-Winger</option>
+            <option value="striker">Striker</option>
+          </select>
+        </div>
+        
+        <div>
+          <label for="height" class="block text-sm font-medium text-gray-800 mb-1">Height (cm) *</label>
+          <input type="number" step="0.01" id="height" name="height" required class="w-full px-3 py-2 border border-gray-300 rounded">
+        </div>
+        
+        <div>
+          <label for="description" class="block text-sm font-medium text-gray-800 mb-1">Description *</label>
+          <textarea id="description" name="description" required rows="3" class="w-full px-3 py-2 border border-gray-300 rounded"></textarea>
+        </div>
+        
+        <div>
+          <label for="thumbnail" class="block text-sm font-medium text-gray-800 mb-1">Thumbnail URL</label>
+          <input type="url" id="thumbnail" name="thumbnail" class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="https://example.com/image.jpg">
+        </div>
+        
+        <div class="flex items-center">
+          <input type="checkbox" id="is_featured" name="is_featured" class="mr-2">
+          <label for="is_featured" class="text-sm font-medium text-gray-800">Featured Player</label>
+        </div>
+      </div>
+      
+      <div class="flex gap-2 mt-6">
+        <button type="submit" class="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Save Player</button>
+        <button type="button" onclick="closePlayerModal()" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal">
+  <div class="modal-content max-w-md">
+    <div class="text-center">
+      <h2 class="text-xl font-semibold mb-2">Delete Player</h2>
+      <p class="text-gray-600 mb-6">Are you sure you want to delete <strong id="deletePlayerName"></strong>? This action cannot be undone.</p>
+      
+      <div class="flex gap-2">
+        <button onclick="confirmDelete()" class="flex-1 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Delete</button>
+        <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentFilter = 'all';
+  let playerToDelete = null;
+  
+  // Toast Functions
+  function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+    toast.innerHTML = `
+      <span class="text-2xl">${icon}</span>
+      <span>${message}</span>
+    `;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.classList.add('removing');
+      setTimeout(() => {
+        container.removeChild(toast);
+      }, 300);
+    }, 3000);
+  }
+  
+  // Load Players
+  async function loadPlayers(filter) {
+    if (filter) currentFilter = filter;
+    
+    // Update button states
+    document.getElementById('btnAllPlayers').className = currentFilter === 'all' 
+      ? 'px-3 py-1 rounded bg-green-600 text-white' 
+      : 'px-3 py-1 rounded border border-gray-300 text-gray-800';
+    document.getElementById('btnMyPlayers').className = currentFilter === 'my' 
+      ? 'px-3 py-1 rounded bg-green-600 text-white' 
+      : 'px-3 py-1 rounded border border-gray-300 text-gray-800';
+    
+    // Show loading state
+    document.getElementById('loadingState').classList.remove('hidden');
+    document.getElementById('errorState').classList.add('hidden');
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('playersList').classList.add('hidden');
+    
+    try {
+      const response = await fetch(`/api/players/?filter=${currentFilter}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to load players');
+      }
+      
+      const data = await response.json();
+      
+      // Hide loading state
+      document.getElementById('loadingState').classList.add('hidden');
+      
+      if (data.players.length === 0) {
+        // Show empty state
+        document.getElementById('emptyState').classList.remove('hidden');
+      } else {
+        // Show players list
+        document.getElementById('playersList').classList.remove('hidden');
+        renderPlayers(data.players);
+      }
+    } catch (error) {
+      // Hide loading state, show error state
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('errorState').classList.remove('hidden');
+      console.error('Error loading players:', error);
+    }
+  }
+  
+  // Render Players
+  function renderPlayers(players) {
+    const container = document.getElementById('playersList');
+    container.innerHTML = '';
+    
+    players.forEach(player => {
+      const card = document.createElement('article');
+      card.className = 'bg-white border border-gray-200 rounded-md p-3';
+      
+      // Escape HTML to prevent XSS
+      const escapeHtml = (text) => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      };
+      
+      const thumbnailHTML = player.thumbnail 
+        ? `<a href="/player/${player.id}/"><img src="${escapeHtml(player.thumbnail)}" alt="${escapeHtml(player.name)}" class="w-14 h-14 object-cover rounded"></a>`
+        : `<div class="w-14 h-14 bg-gray-200 rounded"></div>`;
+      
+      const featuredBadge = player.is_featured === true
+        ? `<span class="inline-block text-[10px] px-2 py-0.5 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded">Featured</span>`
+        : '';
+      
+      const actionsHTML = player.is_owner 
+        ? `<details class="relative inline-block">
+            <summary class="list-none px-2 py-1 border border-gray-300 rounded text-gray-800 cursor-pointer">⋯</summary>
+            <div class="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded z-10">
+              <a href="#" onclick="openEditModal('${player.id}'); return false;" class="block px-3 py-2 text-sm text-gray-800 hover:bg-gray-50">Edit</a>
+              <a href="#" onclick="openDeleteModal('${player.id}', '${escapeHtml(player.name)}'); return false;" class="block px-3 py-2 text-sm text-red-700 hover:bg-gray-50">Delete</a>
+            </div>
+          </details>`
+        : '';
+      
+      card.innerHTML = `
+        <div class="flex items-center gap-3">
+          ${thumbnailHTML}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <a href="/player/${player.id}/" class="font-semibold text-gray-900 truncate">${escapeHtml(player.name)}</a>
+              ${featuredBadge}
+            </div>
+            <div class="mt-1 flex flex-wrap gap-1">
+              <span class="inline-block text-[10px] px-2 py-0.5 bg-blue-100 text-blue-800 border border-blue-200 rounded">${escapeHtml(player.category_display)}</span>
+              <span class="inline-block text-[10px] px-2 py-0.5 bg-green-100 text-green-800 border border-green-200 rounded">${escapeHtml(player.club)}</span>
+              <span class="inline-block text-[10px] px-2 py-0.5 bg-gray-100 text-gray-800 border border-gray-200 rounded">${escapeHtml(player.nationality)}</span>
+            </div>
+          </div>
+          <div class="text-right">
+            ${actionsHTML}
+          </div>
+        </div>
+      `;
+      
+      container.appendChild(card);
+    });
+  }
+  
+  // Modal Functions
+  function openCreateModal() {
+    document.getElementById('modalTitle').textContent = 'Add New Player';
+    document.getElementById('playerForm').reset();
+    document.getElementById('playerId').value = '';
+    document.getElementById('playerModal').classList.add('show');
+  }
+  
+  async function openEditModal(playerId) {
+    try {
+      const response = await fetch(`/api/players/?filter=${currentFilter}`);
+      const data = await response.json();
+      const player = data.players.find(p => p.id === playerId);
+      
+      if (player) {
+        document.getElementById('modalTitle').textContent = 'Edit Player';
+        document.getElementById('playerId').value = player.id;
+        document.getElementById('name').value = player.name;
+        document.getElementById('price').value = player.price;
+        document.getElementById('club').value = player.club;
+        document.getElementById('nationality').value = player.nationality;
+        document.getElementById('category').value = player.category;
+        document.getElementById('height').value = player.height;
+        document.getElementById('description').value = player.description;
+        document.getElementById('thumbnail').value = player.thumbnail || '';
+        document.getElementById('is_featured').checked = player.is_featured;
+        document.getElementById('playerModal').classList.add('show');
+      }
+    } catch (error) {
+      showToast('Failed to load player data', 'error');
+    }
+  }
+  
+  function closePlayerModal() {
+    document.getElementById('playerModal').classList.remove('show');
+  }
+  
+  async function submitPlayerForm(event) {
+    event.preventDefault();
+    
+    const playerId = document.getElementById('playerId').value;
+    const formData = new FormData(event.target);
+    
+    // Handle checkbox for is_featured
+    const isFeatured = document.getElementById('is_featured').checked;
+    formData.set('is_featured', isFeatured ? 'true' : 'false');
+    
+    console.log('Submitting player with is_featured:', isFeatured);
+    
+    const url = playerId 
+      ? `/api/players/${playerId}/update/` 
+      : '/api/players/create/';
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken')
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.status === 'success') {
+        showToast(data.message, 'success');
+        closePlayerModal();
+        loadPlayers();
+      } else {
+        showToast(data.message || 'An error occurred', 'error');
+      }
+    } catch (error) {
+      showToast('Failed to save player', 'error');
+    }
+  }
+  
+  function openDeleteModal(playerId, playerName) {
+    playerToDelete = playerId;
+    document.getElementById('deletePlayerName').textContent = playerName;
+    document.getElementById('deleteModal').classList.add('show');
+  }
+  
+  function closeDeleteModal() {
+    playerToDelete = null;
+    document.getElementById('deleteModal').classList.remove('show');
+  }
+  
+  async function confirmDelete() {
+    if (!playerToDelete) return;
+    
+    try {
+      const response = await fetch(`/api/players/${playerToDelete}/delete/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken')
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.status === 'success') {
+        showToast(data.message, 'success');
+        closeDeleteModal();
+        loadPlayers();
+      } else {
+        showToast(data.message || 'Failed to delete player', 'error');
+      }
+    } catch (error) {
+      showToast('Failed to delete player', 'error');
+    }
+  }
+  
+  // Get CSRF Token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  
+  // Load players on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    loadPlayers();
+  });
+</script>
 {% endblock content %}

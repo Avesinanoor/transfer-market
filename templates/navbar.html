@@ -12,13 +12,13 @@
             <div class="font-medium text-gray-900">{{ name|default:user.username }}</div>
             <div class="text-gray-500">{{ npm|default:"Student" }} - {{ class|default:"Class" }}</div>
           </div>
-          <a href="{% url 'main:logout' %}" class="text-red-700">Logout</a>
+          <a href="#" onclick="handleLogout(event)" class="text-red-700">Logout</a>
         {% else %}
           <a href="{% url 'main:login' %}" class="text-gray-700">Login</a>
           <a href="{% url 'main:register' %}" class="bg-green-600 text-white px-4 py-2 rounded">Register</a>
         {% endif %}
       </div>
-      <!-- Simple mobile: always visible links below -->
+      <!-- Simple mobile -->
     </div>
   </div>
   <div class="md:hidden border-t border-gray-200">
@@ -26,7 +26,7 @@
       <a href="/" class="text-gray-700">Home</a>
       <a href="{% url 'main:register_player' %}" class="text-gray-700">Register Player</a>
       {% if user.is_authenticated %}
-        <a href="{% url 'main:logout' %}" class="text-red-700 ml-auto">Logout</a>
+        <a href="#" onclick="handleLogout(event)" class="text-red-700 ml-auto">Logout</a>
       {% else %}
         <a href="{% url 'main:login' %}" class="text-gray-700 ml-auto">Login</a>
         <a href="{% url 'main:register' %}" class="bg-green-600 text-white px-3 py-1 rounded">Register</a>
@@ -34,3 +34,34 @@
     </div>
   </div>
 </nav>
+
+{% if user.is_authenticated %}
+<script>
+  async function handleLogout(event) {
+    event.preventDefault();
+    
+    try {
+      const response = await fetch('/api/logout/', {
+        method: 'GET',
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.status === 'success') {
+        // Show toast if function exists (on main page)
+        if (typeof showToast === 'function') {
+          showToast(data.message, 'success');
+          setTimeout(() => {
+            window.location.href = '/login/';
+          }, 1000);
+        } else {
+          // If no toast function, redirect immediately
+          window.location.href = '/login/';
+        }
+      }
+    } catch (error) {
+      window.location.href = '/logout/';
+    }
+  }
+</script>
+{% endif %}

@@ -1,30 +1,84 @@
 {% extends 'base.html' %}
 {% block meta %}
 <title>Login - Transfer Market</title>
+<style>
+  /* Toast Styles */
+  .toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .toast {
+    min-width: 300px;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  @keyframes slideIn {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideOut {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+  }
+  
+  .toast.removing {
+    animation: slideOut 0.3s ease-out;
+  }
+  
+  .toast-success {
+    background-color: #10b981;
+    color: white;
+  }
+  
+  .toast-error {
+    background-color: #ef4444;
+    color: white;
+  }
+  
+  .toast-info {
+    background-color: #3b82f6;
+    color: white;
+  }
+</style>
 {% endblock meta %}
 
 {% block content %}
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
 <div class="bg-gray-100 min-h-screen flex items-center justify-center py-8 px-4">
   <div class="max-w-md w-full">
     <div class="bg-white border border-gray-200 rounded-md p-6 form-style">
       <h1 class="text-xl font-semibold mb-4">Sign In</h1>
 
-      {% if form.non_field_errors %}
-        <div class="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
-          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
-        </div>
-      {% endif %}
-      {% if form.errors %}
-        <div class="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
-          {% for field, errors in form.errors.items %}
-            {% if field != '__all__' %}
-              {% for error in errors %}<div>{{ field|title }}: {{ error }}</div>{% endfor %}
-            {% endif %}
-          {% endfor %}
-        </div>
-      {% endif %}
+      <div id="errorMessage" class="hidden mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3"></div>
 
-      <form method="POST" action="" class="space-y-4">
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
         {% csrf_token %}
         <div>
           <label for="username" class="block text-sm font-medium text-gray-800 mb-1">Username</label>
@@ -34,7 +88,9 @@
           <label for="password" class="block text-sm font-medium text-gray-800 mb-1">Password</label>
           <input id="password" name="password" type="password" required class="w-full px-3 py-2 border border-gray-300 rounded"/>
         </div>
-        <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded">Sign In</button>
+        <button type="submit" id="loginButton" class="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+          Sign In
+        </button>
       </form>
 
       <div class="mt-6 text-center border-t border-gray-200 pt-4 text-sm">
@@ -44,4 +100,87 @@
     </div>
   </div>
 </div>
+
+<script>
+  // Toast Functions
+  function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+    toast.innerHTML = `
+      <span class="text-2xl">${icon}</span>
+      <span>${message}</span>
+    `;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.classList.add('removing');
+      setTimeout(() => {
+        container.removeChild(toast);
+      }, 300);
+    }, 3000);
+  }
+  
+  // Handle Login
+  async function handleLogin(event) {
+    event.preventDefault();
+    
+    const button = document.getElementById('loginButton');
+    const errorDiv = document.getElementById('errorMessage');
+    
+    // Disable button and show loading
+    button.disabled = true;
+    button.textContent = 'Signing in...';
+    errorDiv.classList.add('hidden');
+    
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    
+    try {
+      const response = await fetch('/api/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: username,
+          password: password
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.status === 'success') {
+        showToast(data.message, 'success');
+        
+        // Set last login cookie
+        document.cookie = `last_login=${new Date().toISOString()}; path=/`;
+        
+        // Redirect after short delay
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
+      } else {
+        errorDiv.textContent = data.message || 'Login failed';
+        errorDiv.classList.remove('hidden');
+        showToast(data.message || 'Login failed', 'error');
+        
+        // Re-enable button
+        button.disabled = false;
+        button.textContent = 'Sign In';
+      }
+    } catch (error) {
+      errorDiv.textContent = 'An error occurred. Please try again.';
+      errorDiv.classList.remove('hidden');
+      showToast('An error occurred. Please try again.', 'error');
+      
+      // Re-enable button
+      button.disabled = false;
+      button.textContent = 'Sign In';
+    }
+  }
+</script>
 {% endblock content %}

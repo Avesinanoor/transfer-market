@@ -1,44 +1,102 @@
 {% extends 'base.html' %}
 {% block meta %}
 <title>Register - Transfer Market</title>
+<style>
+  /* Toast Styles */
+  .toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .toast {
+    min-width: 300px;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  @keyframes slideIn {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideOut {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+  }
+  
+  .toast.removing {
+    animation: slideOut 0.3s ease-out;
+  }
+  
+  .toast-success {
+    background-color: #10b981;
+    color: white;
+  }
+  
+  .toast-error {
+    background-color: #ef4444;
+    color: white;
+  }
+  
+  .toast-info {
+    background-color: #3b82f6;
+    color: white;
+  }
+</style>
 {% endblock meta %}
 
 {% block content %}
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
 <div class="bg-gray-100 min-h-screen flex items-center justify-center py-8 px-4">
   <div class="max-w-md w-full">
     <div class="bg-white border border-gray-200 rounded-md p-6 form-style">
       <h1 class="text-xl font-semibold mb-4">Create Account</h1>
 
-      {% if form.non_field_errors %}
-        <div class="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
-          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
-        </div>
-      {% endif %}
-      {% if form.errors %}
-        <div class="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">
-          {% for field, errors in form.errors.items %}
-            {% if field != '__all__' %}
-              {% for error in errors %}<div>{{ field|title }}: {{ error }}</div>{% endfor %}
-            {% endif %}
-          {% endfor %}
-        </div>
-      {% endif %}
+      <div id="errorMessage" class="hidden mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3"></div>
 
-      <form method="POST" action="" class="space-y-4">
+      <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4">
         {% csrf_token %}
         <div>
           <label for="username" class="block text-sm font-medium text-gray-800 mb-1">Username</label>
           <input id="username" name="username" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded"/>
+          <p class="text-xs text-gray-500 mt-1">Username must be unique and contain only letters, numbers, and @/./+/-/_ characters.</p>
         </div>
         <div>
           <label for="password1" class="block text-sm font-medium text-gray-800 mb-1">Password</label>
           <input id="password1" name="password1" type="password" required class="w-full px-3 py-2 border border-gray-300 rounded"/>
+          <p class="text-xs text-gray-500 mt-1">Password must be at least 8 characters and not too common.</p>
         </div>
         <div>
           <label for="password2" class="block text-sm font-medium text-gray-800 mb-1">Confirm Password</label>
           <input id="password2" name="password2" type="password" required class="w-full px-3 py-2 border border-gray-300 rounded"/>
         </div>
-        <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded">Create Account</button>
+        <button type="submit" id="registerButton" class="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+          Create Account
+        </button>
       </form>
 
       <div class="mt-6 text-center text-sm">
@@ -47,4 +105,105 @@
     </div>
   </div>
 </div>
+
+<script>
+  // Toast Functions
+  function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+    toast.innerHTML = `
+      <span class="text-2xl">${icon}</span>
+      <span>${message}</span>
+    `;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.classList.add('removing');
+      setTimeout(() => {
+        container.removeChild(toast);
+      }, 300);
+    }, 3000);
+  }
+  
+  // Handle Register
+  async function handleRegister(event) {
+    event.preventDefault();
+    
+    const button = document.getElementById('registerButton');
+    const errorDiv = document.getElementById('errorMessage');
+    
+    // Disable button and show loading
+    button.disabled = true;
+    button.textContent = 'Creating account...';
+    errorDiv.classList.add('hidden');
+    
+    const username = document.getElementById('username').value;
+    const password1 = document.getElementById('password1').value;
+    const password2 = document.getElementById('password2').value;
+    
+    // Client-side validation
+    if (password1.length < 8) {
+      errorDiv.textContent = 'Password must be at least 8 characters long.';
+      errorDiv.classList.remove('hidden');
+      showToast('Password must be at least 8 characters long.', 'error');
+      button.disabled = false;
+      button.textContent = 'Create Account';
+      return;
+    }
+    
+    if (password1 !== password2) {
+      errorDiv.textContent = 'Passwords do not match.';
+      errorDiv.classList.remove('hidden');
+      showToast('Passwords do not match.', 'error');
+      button.disabled = false;
+      button.textContent = 'Create Account';
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/register/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: username,
+          password1: password1,
+          password2: password2
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.status === 'success') {
+        showToast(data.message, 'success');
+        
+        // Redirect to login after short delay
+        setTimeout(() => {
+          window.location.href = '/login/';
+        }, 1500);
+      } else {
+        errorDiv.textContent = data.message || 'Registration failed';
+        errorDiv.classList.remove('hidden');
+        showToast(data.message || 'Registration failed', 'error');
+        
+        // Re-enable button
+        button.disabled = false;
+        button.textContent = 'Create Account';
+      }
+    } catch (error) {
+      errorDiv.textContent = 'An error occurred. Please try again.';
+      errorDiv.classList.remove('hidden');
+      showToast('An error occurred. Please try again.', 'error');
+      
+      // Re-enable button
+      button.disabled = false;
+      button.textContent = 'Create Account';
+    }
+  }
+</script>
 {% endblock content %}

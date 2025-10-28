@@ -1,6 +1,12 @@
 from django.urls import path
-from main.views import show_main, register_player, show_player, delete_player, show_json, show_xml, show_json_by_id, show_xml_by_id
-from main.views import register, login_user, logout_user, edit_player
+from main.views import (
+    show_main, register_player, show_player, delete_player, 
+    show_json, show_xml, show_json_by_id, show_xml_by_id,
+    register, login_user, logout_user, edit_player,
+    get_players_json, create_player_ajax, update_player_ajax, 
+    delete_player_ajax, register_ajax, login_ajax, logout_ajax
+)
+
 app_name = 'main'
 
 urlpatterns = [
@@ -16,5 +22,13 @@ urlpatterns = [
     path('register/', register, name='register'),
     path('login/', login_user, name='login'),
     path('logout/', logout_user, name='logout'),
-
+    
+    # AJAX endpoints
+    path('api/players/', get_players_json, name='get_players_json'),
+    path('api/players/create/', create_player_ajax, name='create_player_ajax'),
+    path('api/players/<str:id>/update/', update_player_ajax, name='update_player_ajax'),
+    path('api/players/<str:id>/delete/', delete_player_ajax, name='delete_player_ajax'),
+    path('api/register/', register_ajax, name='register_ajax'),
+    path('api/login/', login_ajax, name='login_ajax'),
+    path('api/logout/', logout_ajax, name='logout_ajax'),
 ]
