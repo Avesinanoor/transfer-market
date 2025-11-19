@@ -8,48 +8,75 @@
 <div class="bg-gray-100 min-h-screen py-8">
   <div class="max-w-6xl mx-auto px-4">
 
-    <a href="{% url 'main:show_main' %}" class="text-sm text-gray-700">← Back to list</a>
+    <div class="mb-4">
+      <a href="{% url 'main:show_main' %}" class="text-sm text-gray-700 hover:text-gray-900 font-medium transition-colors">�+? Back to list</a>
+    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+    <!-- Loading State -->
+    <div id="loading-state" class="bg-white border border-gray-200 rounded-md p-8 text-center">
+      <div class="flex flex-col items-center gap-3">
+        <svg class="animate-spin h-8 w-8 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <p class="text-gray-600">Loading player detail...</p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" class="bg-white border border-gray-200 rounded-md p-8 text-center hidden">
+      <div class="flex flex-col items-center gap-3">
+        <div class="text-red-500 text-4xl">!</div>
+        <h3 class="text-lg font-semibold text-gray-900">Failed to load player</h3>
+        <p class="text-gray-500 text-sm">Please try again later.</p>
+      </div>
+    </div>
+
+    <!-- Player Content -->
+    <div id="player-content" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4 hidden">
       <!-- Left: Photo & basic info -->
       <div class="bg-white border border-gray-200 rounded-md p-4">
-        {% if player.thumbnail %}
-          <img src="{{ player.thumbnail }}" alt="{{ player.name }}" class="w-full h-64 object-cover rounded"/>
-        {% else %}
-          <div class="w-full h-64 bg-gray-200 rounded"></div>
-        {% endif %}
+        <div id="player-thumbnail-container" class="w-full h-64 bg-gray-200 rounded overflow-hidden flex items-center justify-center">
+          <img id="player-thumbnail" src="" alt="" class="w-full h-full object-cover hidden" />
+        </div>
         <div class="mt-4">
-          <div class="text-lg font-semibold">{{ player.name }}</div>
-          <div class="text-sm text-gray-600">{{ player.club }}</div>
-          <div class="text-sm text-gray-600">{{ player.nationality }}</div>
+          <div id="player-name" class="text-lg font-semibold">{{ player.name }}</div>
+          <div id="player-club" class="text-sm text-gray-600">{{ player.club }}</div>
+          <div id="player-nationality" class="text-sm text-gray-600">{{ player.nationality }}</div>
         </div>
       </div>
 
       <!-- Right: Details -->
       <div class="lg:col-span-2 bg-white border border-gray-200 rounded-md">
-        <div class="px-6 py-4 border-b border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h1 class="text-xl font-semibold">Player Profile</h1>
+          <div id="player-badges" class="flex flex-wrap gap-2 text-xs font-medium"></div>
         </div>
         <div class="px-6 py-5">
           <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
             <div>
               <dt class="text-gray-600">Position</dt>
-              <dd class="font-medium">{{ player.get_category_display|default:player.category }}</dd>
+              <dd id="player-position" class="font-medium">{{ player.category }}</dd>
             </div>
             <div>
               <dt class="text-gray-600">Height</dt>
-              <dd class="font-medium">{{ player.height }} cm</dd>
+              <dd id="player-height" class="font-medium">{{ player.height }} cm</dd>
             </div>
             <div>
               <dt class="text-gray-600">Price</dt>
-              <dd class="font-medium">Rp {{ player.price }}</dd>
+              <dd id="player-price" class="font-medium">Rp {{ player.price }}</dd>
             </div>
           </dl>
-          {% if player.description %}
-            <div class="mt-6">
-              <div class="text-gray-800 text-sm leading-relaxed whitespace-pre-line">{{ player.description }}</div>
+          <div class="mt-6">
+            <div id="player-description" class="text-gray-800 text-sm leading-relaxed whitespace-pre-line">
+              {{ player.description }}
             </div>
-          {% endif %}
+          </div>
+          <div class="mt-6">
+            <div class="text-gray-600 text-sm">
+              Registered by: <span id="player-registered-by">{{ player.user.username }}</span>
+            </div>
+          </div>
         </div>
         <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -67,4 +94,159 @@
 
   </div>
 </div>
+
+<script>
+// Configuration
+const PLAYER_ID = "{{ player.id }}";
+const PLAYER_DETAIL_ENDPOINT = `{% url 'main:show_json_by_id' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', PLAYER_ID);
+const PLAYER_OWNER_USERNAME = "{{ player.user.username|default_if_none:'' }}";
+
+// DOM Elements
+const loadingState = document.getElementById('loading-state');
+const errorState = document.getElementById('error-state');
+const playerContent = document.getElementById('player-content');
+const playerThumbnailContainer = document.getElementById('player-thumbnail-container');
+const playerThumbnail = document.getElementById('player-thumbnail');
+const playerName = document.getElementById('player-name');
+const playerClub = document.getElementById('player-club');
+const playerNationality = document.getElementById('player-nationality');
+const playerPosition = document.getElementById('player-position');
+const playerHeight = document.getElementById('player-height');
+const playerPrice = document.getElementById('player-price');
+const playerDescription = document.getElementById('player-description');
+const playerRegisteredBy = document.getElementById('player-registered-by');
+const playerBadges = document.getElementById('player-badges');
+
+// Show/hide page sections
+function showState(state) {
+  loadingState.classList.toggle('hidden', state !== 'loading');
+  errorState.classList.toggle('hidden', state !== 'error');
+  playerContent.classList.toggle('hidden', state !== 'ready');
+}
+
+// Get readable position label
+function getPositionLabel(categoryCode) {
+  const mapping = {
+    'goalkeeper': 'Goalkeeper',
+    'center-back': 'Center-Back',
+    'left-back': 'Left-Back',
+    'right-back': 'Right-Back',
+    'center-midfielder': 'Center-Midfielder',
+    'attacking-midfielder': 'Attacking-Midfielder',
+    'defensive-midfielder': 'Defensive-Midfielder',
+    'left-winger': 'Left-Winger',
+    'right-winger': 'Right-Winger',
+    'striker': 'Striker',
+  };
+  return mapping[categoryCode] || categoryCode || '-';
+}
+
+// Render player content from JSON (flat object, like football-news)
+function renderPlayer(player) {
+  if (!player || typeof player !== 'object') {
+    throw new Error('Invalid player data');
+  }
+
+  // Basic info
+  const name = player.name || '';
+  const club = player.club || '';
+  const nationality = player.nationality || '';
+
+  playerName.textContent = name;
+  playerClub.textContent = club;
+  playerNationality.textContent = nationality;
+
+  // Update document title
+  if (name) {
+    document.title = `${name} - Transfer Market`;
+  }
+
+  // Thumbnail
+  if (player.thumbnail) {
+    playerThumbnail.src = player.thumbnail;
+    playerThumbnail.alt = name || 'Player thumbnail';
+    playerThumbnail.classList.remove('hidden');
+  } else {
+    playerThumbnail.src = '';
+    playerThumbnail.alt = '';
+    playerThumbnail.classList.add('hidden');
+  }
+
+  // Position / category
+  playerPosition.textContent = getPositionLabel(player.category);
+
+  // Height
+  if (player.height !== undefined && player.height !== null && player.height !== '') {
+    playerHeight.textContent = `${player.height} cm`;
+  } else {
+    playerHeight.textContent = '-';
+  }
+
+  // Price
+  if (player.price !== undefined && player.price !== null) {
+    playerPrice.textContent = `Rp ${player.price}`;
+  } else {
+    playerPrice.textContent = 'Rp -';
+  }
+
+  // Description
+  playerDescription.textContent = player.description || '';
+
+  // Registered by (prefer JSON, fallback to server-rendered username)
+  if (player.user_username) {
+    playerRegisteredBy.textContent = player.user_username;
+  } else if (PLAYER_OWNER_USERNAME) {
+    playerRegisteredBy.textContent = PLAYER_OWNER_USERNAME;
+  }
+
+  // Badges (featured, nationality chip, club chip)
+  playerBadges.innerHTML = '';
+
+  if (player.is_featured) {
+    const featuredBadge = document.createElement('span');
+    featuredBadge.className = 'inline-flex items-center px-3 py-1 rounded-md bg-yellow-100 text-yellow-800';
+    featuredBadge.textContent = 'Featured';
+    playerBadges.appendChild(featuredBadge);
+  }
+
+  if (nationality) {
+    const nationalityBadge = document.createElement('span');
+    nationalityBadge.className = 'inline-flex items-center px-3 py-1 rounded-md bg-blue-100 text-blue-800';
+    nationalityBadge.textContent = nationality;
+    playerBadges.appendChild(nationalityBadge);
+  }
+
+  if (club) {
+    const clubBadge = document.createElement('span');
+    clubBadge.className = 'inline-flex items-center px-3 py-1 rounded-md bg-gray-100 text-gray-800';
+    clubBadge.textContent = club;
+    playerBadges.appendChild(clubBadge);
+  }
+}
+
+// Fetch player detail
+async function loadPlayerDetail() {
+  try {
+    showState('loading');
+
+    const response = await fetch(PLAYER_DETAIL_ENDPOINT, {
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch player detail');
+    }
+
+    const playerData = await response.json();
+    renderPlayer(playerData);
+    showState('ready');
+  } catch (error) {
+    console.error('Error loading player detail:', error);
+    showState('error');
+  }
+}
+
+// Initialize page
+loadPlayerDetail();
+</script>
 {% endblock content %}

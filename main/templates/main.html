@@ -322,6 +322,7 @@
       ? 'px-3 py-1 rounded bg-green-600 text-white' 
       : 'px-3 py-1 rounded border border-gray-300 text-gray-800';
     
+    
     // Show loading state
     document.getElementById('loadingState').classList.remove('hidden');
     document.getElementById('errorState').classList.add('hidden');
@@ -399,7 +400,7 @@
               ${featuredBadge}
             </div>
             <div class="mt-1 flex flex-wrap gap-1">
-              <span class="inline-block text-[10px] px-2 py-0.5 bg-blue-100 text-blue-800 border border-blue-200 rounded">${escapeHtml(player.category_display)}</span>
+              <span class="inline-block text-[10px] px-2 py-0.5 bg-blue-100 text-blue-800 border border-blue-200 rounded">${escapeHtml(player.category)}</span>
               <span class="inline-block text-[10px] px-2 py-0.5 bg-green-100 text-green-800 border border-green-200 rounded">${escapeHtml(player.club)}</span>
               <span class="inline-block text-[10px] px-2 py-0.5 bg-gray-100 text-gray-800 border border-gray-200 rounded">${escapeHtml(player.nationality)}</span>
             </div>
@@ -436,6 +437,7 @@
         document.getElementById('club').value = player.club;
         document.getElementById('nationality').value = player.nationality;
         document.getElementById('category').value = player.category;
+        document.getElementById('categorydisplay').value = player.get_category_display || player.category;
         document.getElementById('height').value = player.height;
         document.getElementById('description').value = player.description;
         document.getElementById('thumbnail').value = player.thumbnail || '';

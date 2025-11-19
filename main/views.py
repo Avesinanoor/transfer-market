@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 import json
+import requests
 
 # Create your views here.
 
@@ -90,11 +91,24 @@ def show_xml_by_id(request, player_id):
 
 def show_json_by_id(request, player_id):
     try:
-        player_item = Player.objects.get(pk=player_id)
-        json_data = serializers.serialize('json', [player_item])
-        return HttpResponse(json_data, content_type='application/json')
+        player = Player.objects.select_related('user').get(pk=player_id)
+        data = {
+            'id': str(player.id),
+            'name': player.name,
+            'price': player.price,
+            'description': player.description,
+            'thumbnail': player.thumbnail,
+            'category': player.category,
+            'is_featured': player.is_featured,
+            'club': player.club,
+            'nationality': player.nationality,
+            'height': player.height,
+            'user_id': player.user_id,
+            'user_username': player.user.username if player.user_id else None,
+        }
+        return JsonResponse(data)
     except Player.DoesNotExist:
-        return HttpResponse(status=404)
+        return JsonResponse({'detail': 'Not found'}, status=404)
     
 def register(request):
     form = UserCreationForm()
@@ -136,9 +150,11 @@ def get_players_json(request):
     filter_type = request.GET.get('filter', 'all')
     if filter_type == 'all':
         players = Player.objects.all()
+    elif filter_type == 'price':
+        players = Player.objects.all().order_by('price')
     else:
         players = Player.objects.filter(user=request.user)
-    
+
     data = []
     for player in players:
         data.append({
@@ -148,16 +164,17 @@ def get_players_json(request):
             'description': player.description,
             'thumbnail': player.thumbnail or '',
             'category': player.category,
-            'category_display': player.get_category_display(),
             'is_featured': player.is_featured,
             'club': player.club,
             'nationality': player.nationality,
             'height': player.height,
-            'user_id': player.user.id,
-            'is_owner': player.user.id == request.user.id
+            'user_id': player.user.id if player.user_id else None,
+            'user_username': player.user.username if player.user_id else None,
+            'is_owner': player.user_id == request.user.id if player.user_id and request.user.is_authenticated else False,
         })
     
     return JsonResponse({'players': data})
+
 
 @login_required(login_url='/login')
 @require_POST
@@ -331,3 +348,21 @@ def logout_ajax(request):
         'status': 'success',
         'message': 'Logged out successfully!'
     })
+
+def proxy_image(request):
+    image_url = request.GET.get('url')
+    if not image_url:
+        return HttpResponse('No URL provided', status=400)
+    
+    try:
+        # Fetch image from external source
+        response = requests.get(image_url, timeout=10)
+        response.raise_for_status()
+        
+        # Return the image with proper content type
+        return HttpResponse(
+            response.content,
+            content_type=response.headers.get('Content-Type', 'image/jpeg')
+        )
+    except requests.RequestException as e:
+        return HttpResponse(f'Error fetching image: {str(e)}', status=500)

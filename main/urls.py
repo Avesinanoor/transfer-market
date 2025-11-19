@@ -4,7 +4,8 @@ from main.views import (
     show_json, show_xml, show_json_by_id, show_xml_by_id,
     register, login_user, logout_user, edit_player,
     get_players_json, create_player_ajax, update_player_ajax, 
-    delete_player_ajax, register_ajax, login_ajax, logout_ajax
+    delete_player_ajax, register_ajax, login_ajax, logout_ajax,
+    proxy_image
 )
 
 app_name = 'main'
@@ -31,4 +32,6 @@ urlpatterns = [
     path('api/register/', register_ajax, name='register_ajax'),
     path('api/login/', login_ajax, name='login_ajax'),
     path('api/logout/', logout_ajax, name='logout_ajax'),
+
+    path('proxy-image/', proxy_image, name='proxy_image'),
 ]
